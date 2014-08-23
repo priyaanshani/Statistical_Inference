@@ -1,0 +1,151 @@
+---
+title: "Effect of Vitamin C on Tooth Growth in Guinea Pigs"
+output: 
+  pdf_document
+
+
+---
+## Summary Analysis of Data
+
+```{r echo=FALSE}
+
+library(ggplot2)
+library(reshape)
+library(pander)
+data(ToothGrowth)
+ToothGrowth$dose <- factor(ToothGrowth$dose)
+names(ToothGrowth) <- c("Length", "Supplement", "Dosage")
+tg <- melt(ToothGrowth, id=c("Length"), variable_name="Var")
+```
+60 observations of tooth length in guinea pigs given supplimental doses of Vitamin C.  
+3 Dosage levels of Vitamin C. 2 Supplement types. 10 observations each of 6 combinations.
+```{r , results="asis", echo=FALSE, fig.cap="Foobar", fig.width=6, fig.height=2}
+
+Mean <- c( mean(tg[, "Length" ]) ,                mean(tg[tg$value == "OJ", "Length" ]),
+           mean(tg[tg$value == "VC", "Length" ]), mean(tg[tg$value == "0.5", "Length" ]),
+           mean(tg[tg$value == "1",  "Length" ]), mean(tg[tg$value == "2", "Length" ])   
+           )
+          
+SD  <-   c( sd(tg[, "Length" ]),                 sd(tg[tg$value == "OJ", "Length" ]),
+            sd(tg[tg$value == "VC", "Length" ]), sd(tg[tg$value == "0.5", "Length" ]),
+            sd(tg[tg$value == "1", "Length" ]) , sd(tg[tg$value == "2", "Length" ])
+            )
+
+d <- data.frame(Mean, SD)
+
+row.names(d) <- c("All", "Orange Juice", "Ascorbic Acid", "0.5 mg", "1.0 mg", "2.0 mg")
+
+pandoc.table(d , style="rmarkdown", split.tables=900, caption="Tooth Lengths", justify="left" , round=2)
+```
+
+```{r , fig.height=2.2 , fig.width=3.4,  echo=FALSE}
+
+theme_set(theme_bw(base_size = 8))
+
+g <- ggplot(ToothGrowth, aes(x = Length)) + 
+  geom_histogram(aes(y = ..density..), binwidth=2.5, fill= 'firebrick', colour='black') +
+    geom_density(colour="blue") +
+    xlab("Tooth Length") + 
+    ylab("") + 
+    ggtitle("Distribution of Tooth Lengths") + theme(axis.ticks = element_blank(), axis.text.y = element_blank())
+
+    
+
+print(g)
+
+ggplot(ToothGrowth, aes(x=interaction(Supplement,Dosage), y=Length,colour=Dosage)) + 
+            theme(axis.title.x=element_text(size=1,  colour="red")) +
+            geom_boxplot() +
+            xlab("") + 
+            ylab("") + 
+            ggtitle("By Dosage and Supplement Type") +
+            guides(colour=FALSE) +
+            scale_x_discrete( labels=c("OJ 0.5", "VC 0.5", "OJ 1.0", "VC 1.0","OJ 2.0", "VC 2.0"))
+
+```
+
+
+```{r,  fig.height=2.2 , fig.width=8.5,  echo=FALSE}
+
+ggplot(tg, aes(value, Length)) +
+        geom_boxplot(aes(fill=value))  + 
+        geom_point(size=1.5) +
+        facet_grid(.~Var, scales="free_x") +
+        xlab("") +  scale_fill_discrete(name="Group") +
+        ylab("")  
+
+```
+
+
+It seems that Vitamin C affects tooth growth (there is no 'control' group to test this against) since there seems to be a clear upward trend as the dosage increases.
+
+It also seems that orange juice is more effective than ascorbic acid except at the 2.0 mg dosage, where they seem to be the same.
+
+
+## Hypothesis Testing
+
+### Assumptions:  
+* Equal variance. 
+* Null hypothesis: the means of the two groups are equal. 
+* The alternative hypothesis is that the means of the second group is greater than that of the first group (except in test 6 where "not equal" was the alternative hypothesis.)
+* 95% confidence interval. 
+* Using the R function t.test, rejecting the Null Hypothesis if the p-value less than .05
+
+```{r , results="asis", echo=FALSE, fig.cap="Foobarz", fig.width=6}
+
+ToothGrowth$Dosage <- factor(ToothGrowth$Dosage, levels=c("2", "1", "0.5"))
+
+
+t.supplement.gt <- t.test(Length ~ Supplement  , var.equal=F, ToothGrowth, alternative = "g" )
+t.0.5v1.0 <- t.test( Length ~ Dosage, var.equal=T, subset(ToothGrowth, Dosage %in% c(0.5, 1.0)), alternative = "g")
+t.0.5v2.0 <- t.test( Length ~ Dosage, var.equal=T, subset(ToothGrowth, Dosage %in% c(0.5, 2.0)), alternative = "g")
+t.1.0v2.0 <- t.test( Length ~ Dosage, var.equal=T, subset(ToothGrowth, Dosage %in% c(1, 2)), alternative = "g")
+t.0.5  <- t.test( Length ~ Supplement, var.equal=T, subset(ToothGrowth, Dosage %in% c(0.5)), alternative = "g")
+t.1  <- t.test( Length ~ Supplement, var.equal=T, subset(ToothGrowth, Dosage %in% c(1)), alternative = "g")
+t.2  <- t.test( Length ~ Supplement, var.equal=F, subset(ToothGrowth, Dosage %in% c( 2))) # alternative = "l")
+
+
+t.stat <- c(  t.supplement.gt$statistic, t.0.5v1.0$statistic ,  
+            t.1.0v2.0$statistic,  t.0.5$statistic , t.1$statistic  , t.2$statistic )
+            
+t.val <- c( t.supplement.gt$p.value, t.0.5v1.0$p.value,  
+           t.1.0v2.0$p.value ,  t.0.5$p.value ,  t.1$p.value , t.2$p.value )
+            
+t.conf1 <- c( t.supplement.gt$conf.int[1], t.0.5v1.0$conf.int[1],  
+             t.1.0v2.0$conf.int[1] , t.0.5$conf.int[1] ,  t.1$conf.int[1]  ,  t.2$conf.int[1] )
+
+t.conf2 <- c( t.supplement.gt$conf.int[2], t.0.5v1.0$conf.int[2],  
+             t.1.0v2.0$conf.int[2] , t.0.5$conf.int[2]  , t.1$conf.int[2] , t.2$conf.int[2] )
+         
+the.tests <- data.frame(t.stat, t.val, t.conf1, t.conf2 )
+
+
+row.names(the.tests) <- c( "1. VC < OJ", "2. 0.5 < 1.0",   "3. 1.0 < 2.0" , "4. 0.5 VC < 0.5 OJ", 
+                          "5. 1.0 VC < 1.0 OJ",  "6. 2.0 VC != 2.0 OJ")
+
+names(the.tests) <- c("t-value", "p-value", "Conf Int -", "- Conf Int")
+
+
+pandoc.table(the.tests, style="rmarkdown", split.tables=900, caption="t-test results", justify="left" , round=9)
+
+```
+  
+1. VC against OJ.  Reject the Null Hypothesis.
+
+2. Dosage 0.5 mg v 1.0 mg. Reject the Null Hypothesis. 
+
+3. Dosage 1.0 mg v 2.0 mg. Reject the Null Hypothesis.
+
+4. VC v OJ at dosage 0.5 mg. Reject the Null Hypothesis. 
+
+5. VC v OJ at dosage 1.0 mg. Reject the Null Hypothesis. 
+
+6. VC v OJ at dosage 2.0 mg. Do not reject the Null Hypothesis. Looking at the graph above, it seems that orange juice is more effective that ascorbic acid at the lower dosages, but they appear the same at this higher dosage, with the ascorbic acid data also showing a wide variance.
+
+So the data would indicate that:   
+
+*   Higher doses of Vitamin C produce longer teeth.  
+*   In general, orange juice produces longer teeth than ascorbic acid.   
+*   At the 2.0mg dosage, the difference between orange juice and ascorbic  acid evident at lower dosages disappears.   
+
+

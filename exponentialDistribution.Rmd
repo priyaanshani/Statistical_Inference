@@ -1,0 +1,73 @@
+---
+title: "The Exponential Distribution"
+output: pdf_document
+---
+## Distribution of Sample Means
+### Lambda = 0.2, 40 samples, 2500 trials
+```{r echo=FALSE}  
+library(ggplot2) 
+```
+```{r}
+set.seed(314159)  
+lambda <- 0.2;    number.samples <- 40;     nosim <- 2500
+means   <- apply(matrix(rexp(number.samples*nosim, lambda) , nosim), 1, mean)
+mean.of.sample.means     <- mean(means)
+theoretical.mean         <- 1/lambda
+variance.of.sample.means <- var(means)
+theoretical.variance     <- (1/(number.samples*lambda**2))
+```
+The theoretical mean is `r theoretical.mean` while the mean of the sample means is `r mean.of.sample.means`   
+The theoretical variance is `r theoretical.variance` while the variance of sample means is `r variance.of.sample.means`
+
+```{r histogramOfMeans, fig.width=6, fig.height=4, fig.cap="Histogram of Sample Means", warning=FALSE} 
+ 
+g <- ggplot(data = data.frame(means), aes(x = means)) +
+  geom_histogram(aes(y = ..density..), binwidth= 0.1, fill= 'lightblue', colour='black') +
+  geom_density(colour = "blue")+   stat_function(fun = dnorm, colour = "red", size = 1,
+             args = list(mean = 5,sd = 1/(lambda)*(1/sqrt(number.samples))))
+```
+
+```{r echo=FALSE}
+ g + xlab("Means") + 
+    ylab("") + 
+    ggtitle("Means of Samples from Exponential Distribution") +  
+    annotate("text", x = c(7.4,7.5),  y = c(0.5,0.55), size = 3,
+               label =  c("Uniform Density", "Density of samples")) +
+    annotate("segment", x = c(6.2,6.2), xend = c(6.4,6.4), y  = c(0.5,0.55), 
+          yend = c(0.5,0.55),colour = c("red", "blue"))
+```
+**The distribution of sample means comes close to a normal distribution(red)**
+
+
+## Testing Confidence Levels
+
+### Lambda 0.1 to 100.0, 40 samples, 2500 trials
+
+```{r}
+ 
+Lambda.Value <- seq(0.1, 100.0, by = .25);
+
+Coverage <- sapply(Lambda.Value, function(lambda){
+  runs   <- matrix(rexp(number.samples*nosim,lambda) , nosim)    
+  lhats  <- apply(runs , 1, mean)
+  lsd    <- apply(runs,1,sd)
+  ll     <- lhats - qnorm(.975) * lsd /sqrt(number.samples)
+  ul     <- lhats + qnorm(.975) * lsd /sqrt(number.samples)
+  mean(ll < 1/lambda & ul > 1/lambda) })
+
+```
+ 
+ 
+```{r plotOfCoverage}
+
+ggplot(data.frame(Lambda.Value, Coverage), aes(x = Lambda.Value, y = Coverage)) +  
+    geom_line(size = .25) + geom_hline(yintercept = 0.95) + 
+    geom_hline(yintercept = 0.925, colour='navy', linetype=2)+
+    ylim(.85, 1.0) +  xlab("Lambda") +  
+    ggtitle("Coverage of 95% intervals")
+
+```
+
+**Coverage seems to be about 92.5% for the 95% intervals for sample sizes of 40.**  
+**The value of Lambda does not seem to matter.**
+
