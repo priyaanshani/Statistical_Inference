@@ -146,6 +146,8 @@ So the data would indicate that:
 
 *   Higher doses of Vitamin C produce longer teeth.  
 *   In general, orange juice produces longer teeth than ascorbic acid.   
-*   At the 2.0mg dosage, the difference between orange juice and ascorbic  acid evident at lower dosages disappears.   
+*   At the 2.0mg dosage, the difference between orange juice and ascorbic  acid evident at lower dosages disappears. 
 
+
+[Link to Github](https://github.com/raydante/Statistical_Inference) with the .Rmd file that produced this document.
 
